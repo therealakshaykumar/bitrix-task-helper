@@ -143,12 +143,36 @@ export default function Home() {
     return () => window.removeEventListener("paste", onPaste);
   }, [activeId, addImages]);
 
+  // reopen the task you were last on after a reload
+  useEffect(() => {
+    const last = store.get("bth.activeId");
+    if (last) openTask(last);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // persist the generated result (and your edits) per task so a reload doesn't lose it
+  useEffect(() => {
+    if (!activeId || !result) return;
+    store.set(`bth.task.${activeId}`, JSON.stringify({ result, prompt, edited, context }));
+  }, [activeId, result, prompt, edited, context]);
+
   async function openTask(id) {
+    store.set("bth.activeId", id);
     setActiveId(id);
     setTask(null);
     setResult(null);
     setPrompt("");
+    setContext("");
     setEdited(false);
+    try {
+      const saved = JSON.parse(store.get(`bth.task.${id}`, "null"));
+      if (saved?.result) {
+        setResult(saved.result);
+        setPrompt(saved.prompt || "");
+        setEdited(!!saved.edited);
+        setContext(saved.context || "");
+      }
+    } catch {}
     setTaskErr("");
     setImages([]);
     setSelectedAtt([]);
